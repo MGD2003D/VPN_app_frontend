@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vpn/config.dart';
 import 'package:vpn/views/pages/widget_tree.dart';
 
 void main() {
@@ -17,7 +18,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'VPN App',
+      title: Config.appName,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Color(0xFF3CE054),
