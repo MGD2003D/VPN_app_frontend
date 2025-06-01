@@ -1,12 +1,20 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:vpn/config.dart';
-import 'package:vpn/views/pages/login_page.dart';
 
 class RegisterForm extends StatefulWidget {
-  const RegisterForm({super.key});
+  final String? initialFullName;
+  final String? initialEmail;
+  final String? initialUsername;
+  final void Function(String email, String username, String password)? submitCallback;
+  final bool isEditing;
+
+  const RegisterForm({
+    super.key,
+    this.initialFullName,
+    this.initialEmail,
+    this.initialUsername,
+    this.submitCallback,
+    this.isEditing = false,
+  });
 
   @override
   State<RegisterForm> createState() => _RegisterFormState();
@@ -15,51 +23,46 @@ class RegisterForm extends StatefulWidget {
 class _RegisterFormState extends State<RegisterForm> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _fullNameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  late final TextEditingController _emailController;
+  late final TextEditingController _usernameController;
+  late final TextEditingController _passwordController;
+  late final TextEditingController _confirmPasswordController;
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController(text: widget.initialEmail ?? "");
+    _usernameController = TextEditingController(
+      text: widget.initialUsername ?? "",
+    );
+    _passwordController = TextEditingController();
+    _confirmPasswordController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   bool _isValidEmail(String email) {
     return RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w]{2,4}$").hasMatch(email);
   }
 
-  void _register() async {
+  void _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      final fullName = _fullNameController.text;
       final email = _emailController.text;
       final username = _usernameController.text;
       final password = _passwordController.text;
 
-      final payload = {
-        "name": fullName,
-        "email": email,
-        "username": username,
-        "password": password,
-      };
-
-      var response = await http.post(
-        Uri.http(Config.apiHost, Config.registerUrl),
-        headers: {
-          "Content-Type": "application/json; charset=UTF-8",
-        },
-        body: jsonEncode(payload),
-      );
-
-      if (response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Account created! Please log in.")),
-        );
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginPage()));
-      }
-      else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error")),
-        );
+      if (widget.submitCallback != null) {
+        widget.submitCallback!(email, username, password);
       }
     }
   }
@@ -70,20 +73,6 @@ class _RegisterFormState extends State<RegisterForm> {
       key: _formKey,
       child: Column(
         children: [
-          TextFormField(
-            controller: _fullNameController,
-            decoration: const InputDecoration(
-              labelText: "Full Name",
-              border: OutlineInputBorder(),
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return "Please enter your full name";
-              }
-              return null;
-            },
-          ),
-          SizedBox(height: 25),
           TextFormField(
             controller: _emailController,
             decoration: const InputDecoration(
@@ -133,9 +122,9 @@ class _RegisterFormState extends State<RegisterForm> {
               ),
             ),
             validator: (value) {
-              if (value == null || value.isEmpty) {
+              if (!widget.isEditing && (value == null || value.isEmpty)) {
                 return "Please enter a password";
-              } else if (value.length < 8) {
+              } else if (value != null && value.isNotEmpty && value.length < 8) {
                 return "Password must be at least 8 characters";
               }
               return null;
@@ -150,7 +139,9 @@ class _RegisterFormState extends State<RegisterForm> {
               border: const OutlineInputBorder(),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                  _obscureConfirmPassword
+                      ? Icons.visibility
+                      : Icons.visibility_off,
                 ),
                 onPressed: () {
                   setState(() {
@@ -160,7 +151,7 @@ class _RegisterFormState extends State<RegisterForm> {
               ),
             ),
             validator: (value) {
-              if (value == null || value.isEmpty) {
+              if (!widget.isEditing && (value == null || value.isEmpty)) {
                 return "Please confirm your password";
               } else if (value != _passwordController.text) {
                 return "Passwords do not match";
@@ -170,9 +161,12 @@ class _RegisterFormState extends State<RegisterForm> {
           ),
           SizedBox(height: 25),
           FilledButton(
-            onPressed: _register,
+            onPressed: _submitForm,
             style: FilledButton.styleFrom(minimumSize: Size.fromHeight(50)),
-            child: Text("Join!", style: TextStyle(fontSize: 20)),
+            child: Text(
+              widget.isEditing ? "Save" : "Join!",
+              style: TextStyle(fontSize: 20),
+            ),
           ),
           SizedBox(height: 25),
         ],
