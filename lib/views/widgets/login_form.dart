@@ -40,7 +40,7 @@ class _LoginFormState extends State<LoginForm> {
       );
 
       if (response.statusCode == 200) {
-        final token = jsonDecode(response.body)["access_token"];
+        final token = jsonDecode(response.body)["token"];
         await SecureStorageService().saveToken(token);
         Navigator.pushAndRemoveUntil(
           context,
